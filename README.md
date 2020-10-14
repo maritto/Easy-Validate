@@ -46,15 +46,15 @@ Validate fields easily in angular
 #### [TypeScript]
 ``` TYPESCRIPT
 public ShowAlertWithError(ev_error){  
-		alert(ev_error);  
-	}  
-	public ShowAlertFieldValue(succeeded)  
-	{  
-		alert(succeeded);    
-	}
-	public SuccessfullTest(){
-	    alert("I could do a request to the server and all my fields are valid at this point.")
-	}
+	alert(ev_error);  
+}  
+public ShowAlertFieldValue(succeeded)  
+{  
+	alert(succeeded);    
+}
+public SuccessfullTest(){
+    alert("I could do a request to the server and all my fields are valid at this point.")
+}
 ```
 
 # To add custom fields  
