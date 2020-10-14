@@ -6,7 +6,8 @@ import { Directive, ElementRef, OnInit, HostListener, Input } from "@angular/cor
 
 
 export class EasyValidation implements OnInit {
-    static EVErrorsList: EVError[];
+    static EVErrorsList: EVError[] = [];
+    static EVElements: HTMLInputElement[] = [];
     @Input() EVTarget: HTMLElement = undefined;
     @Input() EVType: string;
     @Input() EVErrorMessage: string;
@@ -20,8 +21,7 @@ export class EasyValidation implements OnInit {
 
     public static hasErrors(): boolean {
         for (const iterator of EasyValidation.EVErrorsList) {
-            if(iterator.EVErrorMessages.length > 0)
-            {
+            if (iterator.EVErrorMessages.length > 0) {
                 return true;
             }
         }
@@ -31,7 +31,12 @@ export class EasyValidation implements OnInit {
     @HostListener('click')
     public OnClick() {
         if (this.el.nativeElement instanceof HTMLButtonElement) {
-            if (this.EVSubmit !== undefined) {
+                if (this.EVSubmit !== undefined) {
+                var evt = document.createEvent("HTMLEvents");
+                evt.initEvent("change", false, true);
+                EasyValidation.EVElements.forEach(element => {
+                    element.dispatchEvent(evt);
+                });
                 if (!EasyValidation.hasErrors())
                     this.EVSubmit();
             }
@@ -40,6 +45,13 @@ export class EasyValidation implements OnInit {
 
     ngOnInit(): void {
         EasyValidation.EVErrorsList = [];
+        this.StoreOnChange();
+    }
+
+    private StoreOnChange() {
+        if (this.el.nativeElement instanceof HTMLInputElement) {
+            EasyValidation.EVElements.push(this.el.nativeElement);
+        }
     }
 
     @HostListener('change')
