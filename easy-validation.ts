@@ -1,37 +1,46 @@
-import { unescapeIdentifier } from '@angular/compiler';
-import { Directive, ElementRef, HostListener, Input } from "@angular/core";
-import { element } from 'protractor';
+import { Directive, ElementRef, OnInit, HostListener, Input } from "@angular/core";
 
 @Directive({
     selector: '[EV]'
 })
 
-export class EasyValidation {
 
-    /*USAGE
-    [EV]  //Use EasyValidation directive.
-    [EVType]="'EVEmail'"  //class name as string that represents the type of data to be entered.
-            //TYPES OF DATA AVAILABLE
-                    -> EVEmail : Verifies if it is a valid Email.
-    [EVTarget]="targetToDisplayErrorAt"
-    [EVOnSuccess]="callback" //Argument passed is the value inserted.
-    [EVOnError]="Callback"  //Argument passed is an EVError 
-    */
-
+export class EasyValidation implements OnInit {
+    static EVErrorsList: EVError[];
     @Input() EVTarget: HTMLElement = undefined;
     @Input() EVType: string;
     @Input() EVErrorMessage: string;
     @Input() EVOnSuccess: (success) => void;
     @Input() EVOnError: (error: EVError) => void;
+    @Input() EVSubmit: () => void;
 
-    private _EVEmail = new EVTEmail();
-    public get EVEmail() {
-        return this._EVEmail;
-    }
-
-    public EVTypes: EVType[] = [new EVTEmail()];
+    public EVTypes: EVBase[] = [new EVTEmail()];
 
     constructor(private el: ElementRef) { }
+
+    public static hasErrors(): boolean {
+        for (const iterator of EasyValidation.EVErrorsList) {
+            if(iterator.EVErrorMessages.length > 0)
+            {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    @HostListener('click')
+    public OnClick() {
+        if (this.el.nativeElement instanceof HTMLButtonElement) {
+            if (this.EVSubmit !== undefined) {
+                if (!EasyValidation.hasErrors())
+                    this.EVSubmit();
+            }
+        }
+    }
+
+    ngOnInit(): void {
+        EasyValidation.EVErrorsList = [];
+    }
 
     @HostListener('change')
     public Verify() {
@@ -44,6 +53,8 @@ export class EasyValidation {
                 all_errors.EVErrorMessages.push(tmpError);
             }
         });
+        T.ClearErrors(all_errors);
+        T.SaveErrors(all_errors);
         if (this.EVOnError !== undefined && all_errors.EVErrorMessages !== undefined && all_errors.EVErrorMessages.length > 0) {
             this.EVOnError(all_errors);
         }
@@ -58,7 +69,7 @@ export class EasyValidation {
         }
     }
 
-    private GetEVType(): EVType {
+    private GetEVType(): EVBase {
         for (const t of this.EVTypes) {
             if (t.type === this.EVType) {
                 return t;
@@ -69,14 +80,13 @@ export class EasyValidation {
 }
 
 export interface EVType {
-    ClearTargetDisplay: (target: HTMLElement) => void;
-    DisplayErrors(all_errors: EVError, target: HTMLElement);
     type: string;
     requirements: { (obj: any): string }[];
-    HandleErrors: (errors: string[]) => void;
 }
 
-export class EVTEmail implements EVType {
+export class EVBase implements EVType {
+
+    private errorList: string[];
 
     ClearTargetDisplay(target: HTMLElement) {
         while (target.hasChildNodes()) {
@@ -90,11 +100,33 @@ export class EVTEmail implements EVType {
         all_errors.EVErrorMessages.forEach((value) => {
             newNode.innerHTML += value + "\n";
         });
-        newNode.innerHTML = newNode.innerHTML.trimEnd()
+        newNode.innerHTML = newNode.innerHTML.trim();
         target.appendChild(newNode);
     }
 
-    public type: string = "EVEmail";
+    type: string = undefined;
+    requirements: ((obj: any) => string)[] = [];
+
+    ClearErrors(errors: EVError) {
+        for (let i = 0; i < EasyValidation.EVErrorsList.length; i++) {
+            if (EasyValidation.EVErrorsList[i].EVType === errors.EVType) {
+                EasyValidation.EVErrorsList.splice(i, 1);
+                i--;
+            }
+        }
+    }
+    SaveErrors(errors: EVError) {
+        EasyValidation.EVErrorsList.push(errors);
+    }
+}
+
+export class EVTEmail extends EVBase {
+
+    constructor() {
+        super();
+    }
+
+    type = "EVEmail";
 
     private _errors: string[];
     public get errors(): string[] {
@@ -107,9 +139,6 @@ export class EVTEmail implements EVType {
             return pat.test(<string>natEl.value) ? undefined : "Not a valid email address.";
         }
     ];
-    public HandleErrors: (errors: string[]) => void = (err) => {
-        this._errors = err;
-    };
 }
 
 export interface EVError {
